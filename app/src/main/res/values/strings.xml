@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ReconMaps</string>
+
+    <string name="debug_overlay_text">
+    X: %1$d\nY: %2$d\nGPS: %3$s\nTRANSPORT: %4$s\nCHANNEL: %5$s
+    </string>
+</resources>
