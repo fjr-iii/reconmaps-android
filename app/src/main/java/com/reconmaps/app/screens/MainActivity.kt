@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         mapView = MapCanvasView(this)
+
         debugView = DebugOverlayView(this)
 
         root = FrameLayout(this)

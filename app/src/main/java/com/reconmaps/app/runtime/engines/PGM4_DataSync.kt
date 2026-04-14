@@ -3,17 +3,30 @@ package com.reconmaps.app.runtime.engines
 import com.reconmaps.app.runtime.Channel
 import com.reconmaps.app.runtime.Vehicle
 
-class PGM4_Data {
+class PGM4_DataSync {
 
     private val vehicles = mutableMapOf<String, Vehicle>()
 
-    fun updateVehicle(id: String, x: Float, y: Float, channel: Channel) {
+    fun updateVehicle(
+        id: String,
+        x: Float,
+        y: Float,
+        channel: Channel,
+        timestamp: Long
+    ) {
+        val existing = vehicles[id]
+
+        // 🔒 Ignore stale packets
+        if (existing != null && timestamp < existing.lastUpdate) {
+            return
+        }
+
         vehicles[id] = Vehicle(
             id = id,
             x = x,
             y = y,
             channel = channel,
-            lastUpdate = System.currentTimeMillis(),
+            lastUpdate = timestamp,
             isStale = false
         )
     }

@@ -21,14 +21,22 @@ class PGM1_GPS(
 
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER,
-            1000L,
-            1f,
+            0L,
+            0f,
+            locationListener
+        )
+
+        locationManager.requestLocationUpdates(
+            LocationManager.NETWORK_PROVIDER,
+            0L,
+            0f,
             locationListener
         )
     }
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
+            android.util.Log.d("GPS_DEBUG", "Provider=${location.provider} Acc=${location.accuracy}")
 
             val lat = location.latitude.toFloat()
             val lon = location.longitude.toFloat()
@@ -36,9 +44,10 @@ class PGM1_GPS(
             // ❌ Reject zero coordinates
             if (lat == 0f && lon == 0f) return
 
-            // ❌ Reject poor accuracy
             if (!location.hasAccuracy()) return
-            if (location.accuracy > 50f) return
+
+            // Allow network initially, filter only very bad data
+            if (location.accuracy > 1000f) return
 
             // ✅ Accept as GOOD location
             lastGoodLat = lat

@@ -3,7 +3,7 @@ package com.reconmaps.app.runtime
 import android.os.Handler
 import android.os.Looper
 import com.reconmaps.app.runtime.engines.PGM1_GPS
-import com.reconmaps.app.runtime.engines.PGM4_Data
+import com.reconmaps.app.runtime.engines.PGM4_DataSync
 import kotlin.math.cos
 import kotlin.math.sin
 import com.reconmaps.app.runtime.engines.PGM5_Transport
@@ -18,8 +18,9 @@ object RuntimeShell {
         channel = Channel.ALPHA
     )
 
-    private val data = PGM4_Data()
-    private val selfId = "SELF"
+    private val data = PGM4_DataSync()
+    private val selfId = java.util.UUID.randomUUID().toString()
+
     private val transport = PGM5_Transport()
 
     private val listeners = mutableListOf<(SystemState) -> Unit>()
@@ -27,23 +28,39 @@ object RuntimeShell {
 
     private lateinit var gps: PGM1_GPS
     private var tick = 0
+    private var lastSendTime: Long = 0
 
     fun start(context: android.content.Context) {
 
-        gps = PGM1_GPS(context) { x, y ->
+        android.util.Log.d("TEST", "APP STARTED")
 
-            data.updateVehicle(selfId, x, y, state.channel)
+        gps = PGM1_GPS(context) { lat, lon ->
 
-            val packet = TransportPacket(
-                deviceId = selfId,
-                timestamp = System.currentTimeMillis(),
-                lat = x.toDouble(),
-                lon = y.toDouble()
+            android.util.Log.d("RUNTIME", "[GPS->RUNTIME] lat=$lat lon=$lon")
+
+            data.updateVehicle(
+                "SELF",
+                lat,
+                lon,
+                state.channel,
+                System.currentTimeMillis()
             )
 
-            android.util.Log.d("GPS_CHECK", "Sending: lat=$x lon=$y")
+            val now = System.currentTimeMillis()
 
-            transport.sendPacket(packet)
+            if (now - lastSendTime > 2000) {   // 🔴 send every 2 seconds
+
+                val packet = TransportPacket(
+                    deviceId = selfId,
+                    timestamp = now,
+                    lat = lat.toDouble(),
+                    lon = lon.toDouble()
+                )
+
+                transport.sendPacket(packet)
+
+                lastSendTime = now
+            }
 
             refreshState()
         }
@@ -52,7 +69,6 @@ object RuntimeShell {
 
         loop()
     }
-
     private fun refreshState() {
         state = state.copy(
             vehicles = data.getVehicles()
@@ -66,24 +82,7 @@ object RuntimeShell {
 
             tick++
 
-            // 🔄 Simulated vehicles (still OK)
-            val t = System.currentTimeMillis() / 1000.0
-
-            data.updateVehicle(
-                "V1",
-                (300 + 150 * cos(t)).toFloat(),
-                (300 + 150 * sin(t)).toFloat(),
-                Channel.ALPHA
-            )
-
-            data.updateVehicle(
-                "V2",
-                (500 + 100 * cos(t * 0.7)).toFloat(),
-                (400 + 100 * sin(t * 0.7)).toFloat(),
-                Channel.BRAVO
-            )
-
-            // ❗ DO NOT override state here anymore
+            // 🔕 No simulation, no overrides
 
             refreshState()
 
@@ -124,5 +123,18 @@ object RuntimeShell {
 
         state = state.copy(channel = next)
 
+    }
+    fun onPacketReceived(packet: TransportPacket) {
+        android.util.Log.d("RUNTIME", "[INBOUND] Packet received from transport: $packet")
+
+        data.updateVehicle(
+            packet.deviceId,
+            packet.lat.toFloat(),
+            packet.lon.toFloat(),
+            state.channel,
+            packet.timestamp
+        )
+
+        refreshState()
     }
 }

@@ -21,6 +21,7 @@ class DebugOverlayView(context: Context) : AppCompatTextView(context) {
 
     fun update(state: com.reconmaps.app.runtime.SystemState) {
 
+        android.util.Log.d("DEBUG_OVERLAY", "Vehicle count: ${state.vehicles.size}")
         val self = state.vehicles.find { it.id == "SELF" }
 
         if (self != null) {
