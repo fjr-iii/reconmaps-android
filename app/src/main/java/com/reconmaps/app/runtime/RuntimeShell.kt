@@ -34,57 +34,38 @@ object RuntimeShell {
 
         android.util.Log.d("TEST", "APP STARTED")
 
-        gps = PGM1_GPS(context) { lat, lon ->
-
-            android.util.Log.d("RUNTIME", "[GPS->RUNTIME] lat=$lat lon=$lon")
-
-            data.updateVehicle(
-                "SELF",
-                lat,
-                lon,
-                state.channel,
-                System.currentTimeMillis()
-            )
-
-            val now = System.currentTimeMillis()
-
-            if (now - lastSendTime > 2000) {   // 🔴 send every 2 seconds
-
-                val packet = TransportPacket(
-                    deviceId = selfId,
-                    timestamp = now,
-                    lat = lat.toDouble(),
-                    lon = lon.toDouble()
-                )
-
-                transport.sendPacket(packet)
-
-                lastSendTime = now
-            }
-
-            refreshState()
-        }
+        gps = PGM1_GPS(context)
 
         gps.start()
 
         loop()
     }
-    private fun refreshState() {
-        state = state.copy(
-            vehicles = data.getVehicles()
-        )
-
-        notifyListeners()
-    }
-
     private fun loop() {
         handler.postDelayed({
 
             tick++
 
-            // 🔕 No simulation, no overrides
+            val lat = gps.lastGoodLat
+            val lon = gps.lastGoodLon
 
-            refreshState()
+            if (lat != null && lon != null) {
+
+                data.updateVehicle(
+                    "SELF",
+                    lat.toFloat(),
+                    lon.toFloat(),
+                    state.channel,
+                    System.currentTimeMillis()
+                )
+
+                android.util.Log.d("RUNTIME", "[GPS->RUNTIME] lat=$lat lon=$lon")
+            }
+
+            state = state.copy(
+                vehicles = data.getVehicles()
+            )
+
+            notifyListeners()
 
             loop()
 
@@ -134,7 +115,5 @@ object RuntimeShell {
             state.channel,
             packet.timestamp
         )
-
-        refreshState()
     }
 }

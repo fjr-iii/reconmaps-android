@@ -8,12 +8,13 @@ import android.location.LocationManager
 
 class PGM1_GPS(
     private val context: Context,
-    private val onPosition: (Float, Float) -> Unit
-) {
-
+    )
+{
+    var lastLat: Double? = null
+    var lastLon: Double? = null
     private lateinit var locationManager: LocationManager
-    private var lastGoodLat: Float? = null
-    private var lastGoodLon: Float? = null
+    var lastGoodLat: Double? = null
+    var lastGoodLon: Double? = null
 
     @SuppressLint("MissingPermission")
     fun start() {
@@ -38,22 +39,23 @@ class PGM1_GPS(
         override fun onLocationChanged(location: Location) {
             android.util.Log.d("GPS_DEBUG", "Provider=${location.provider} Acc=${location.accuracy}")
 
-            val lat = location.latitude.toFloat()
-            val lon = location.longitude.toFloat()
+            val lat = location.latitude
+            val lon = location.longitude
 
-            // ❌ Reject zero coordinates
-            if (lat == 0f && lon == 0f) return
+
+// ❌ Reject zero coordinates
+            if (lat == 0.0 && lon == 0.0) return
 
             if (!location.hasAccuracy()) return
 
-            // Allow network initially, filter only very bad data
+// Allow network initially, filter only very bad data
             if (location.accuracy > 1000f) return
 
-            // ✅ Accept as GOOD location
+// ✅ Accept as GOOD location
             lastGoodLat = lat
             lastGoodLon = lon
 
-            onPosition(lat, lon)
+
         }
     }
 }

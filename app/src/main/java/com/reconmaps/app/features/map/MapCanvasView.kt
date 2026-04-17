@@ -1,13 +1,46 @@
 package com.reconmaps.app.features.map
 
 import android.content.Context
+import android.os.Bundle
+import android.util.AttributeSet
+import android.widget.FrameLayout
+
+import org.maplibre.android.maps.MapView
+import android.view.View
+
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.Style
+
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.view.View
 import com.reconmaps.app.runtime.Vehicle
 
-class MapCanvasView(context: Context) : View(context) {
+class MapCanvasView(context: Context, attrs: AttributeSet?) : FrameLayout(context, attrs) {
+
+    private val mapView = MapView(context)
+
+    init {
+        addView(
+            mapView,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT
+            )
+        )
+    }
+
+    fun onCreate(savedInstanceState: Bundle?) {
+        mapView.onCreate(savedInstanceState)
+
+        mapView.getMapAsync { map ->
+            map.setStyle("https://demotiles.maplibre.org/style.json")
+        }
+    }
+
+    fun getMapView(): MapView {
+        return mapView
+    }
 
     private val paint = Paint().apply {
         color = Color.BLUE
@@ -20,9 +53,6 @@ class MapCanvasView(context: Context) : View(context) {
         this.vehicles = vehicles
         invalidate()
     }
-
-
-
 
     override fun onDraw(canvas: Canvas) {
         android.util.Log.d("MAP", "Drawing vehicles: ${vehicles.size}")
@@ -59,5 +89,18 @@ class MapCanvasView(context: Context) : View(context) {
 
             canvas.drawCircle(screenX, screenY, 20f, paint)
         }
+    }
+    fun moveCamera(lat: Double, lon: Double) {
+        mapView.getMapAsync { map ->
+            val position = org.maplibre.android.camera.CameraPosition.Builder()
+                .target(org.maplibre.android.geometry.LatLng(lat, lon))
+                .zoom(15.0)
+                .build()
+
+            map.cameraPosition = position
+        }
+    }
+    fun onResume() {
+        mapView.onResume()
     }
 }

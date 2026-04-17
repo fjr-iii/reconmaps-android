@@ -22,7 +22,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        mapView = MapCanvasView(this)
+        org.maplibre.android.MapLibre.getInstance(this)
+
+        mapView = MapCanvasView(this, null)
+        mapView.onCreate(savedInstanceState)
 
         debugView = DebugOverlayView(this)
 
@@ -94,5 +97,29 @@ class MainActivity : AppCompatActivity() {
         ) {
             RuntimeShell.start(this)
         }
+    }
+    override fun onStart() {
+        super.onStart()
+        mapView.getMapView().onStart()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mapView.onResume()
+    }
+
+    override fun onPause() {
+        mapView.getMapView().onPause()
+        super.onPause()
+    }
+
+    override fun onStop() {
+        mapView.getMapView().onStop()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        mapView.getMapView().onDestroy()
+        super.onDestroy()
     }
 }

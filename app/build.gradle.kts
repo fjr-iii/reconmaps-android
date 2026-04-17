@@ -41,5 +41,5 @@ android {
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("org.maplibre.gl:android-sdk:10.2.0")
+    implementation("org.maplibre.gl:android-sdk:13.0.1")
 }
