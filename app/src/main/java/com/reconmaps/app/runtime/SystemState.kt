@@ -1,6 +1,7 @@
 package com.reconmaps.app.runtime
 
 data class SystemState(
+    val selfId: String = java.util.UUID.randomUUID().toString(),
     val vehicles: List<Vehicle>,
     val gpsEnabled: Boolean,
     val transportOnline: Boolean,

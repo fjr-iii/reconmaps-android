@@ -11,10 +11,16 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.reconmaps.app.features.map.VehicleOverlayView
+
+
+
 
 class MainActivity : AppCompatActivity() {
+    lateinit var mapCanvasView: MapCanvasView
+    private var hasCenteredCamera = false
+    lateinit var vehicleOverlayView: VehicleOverlayView
 
-    private lateinit var mapView: MapCanvasView
     private lateinit var debugView: DebugOverlayView
     private lateinit var buttonBar: ButtonBar
     private lateinit var root: FrameLayout
@@ -24,26 +30,78 @@ class MainActivity : AppCompatActivity() {
 
         org.maplibre.android.MapLibre.getInstance(this)
 
-        mapView = MapCanvasView(this, null)
-        mapView.onCreate(savedInstanceState)
+        // Create map view
+        mapCanvasView = MapCanvasView(this, null)
+        mapCanvasView.onCreate(savedInstanceState)
 
+        // Debug overlay
         debugView = DebugOverlayView(this)
 
+// Root layout
         root = FrameLayout(this)
 
-        // Add views (ORDER MATTERS)
-        root.addView(mapView)
+// Add views (ORDER MATTERS)
+        root.addView(mapCanvasView)
+        vehicleOverlayView = VehicleOverlayView(this)
+        root.addView(vehicleOverlayView)
+
+        val debugParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        )
+
+        debugParams.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+
+        debugView.layoutParams = debugParams
+
         root.addView(debugView)
+
 
         setContentView(root)
 
-        // 🔗 Bind Runtime → Renderer + Debug + ButtonBar
+        // 🔗 Bind Runtime → UI (THIS is the correct connection)
         RuntimeShell.subscribe { state ->
             runOnUiThread {
 
-                mapView.updateVehicles(state.vehicles)
+                val map = mapCanvasView.getMapLibreMap()
+
+                if (map != null) {
+
+                    val renderData = state.vehicles.map { vehicle ->
+
+                        val point = map.projection.toScreenLocation(
+                            org.maplibre.android.geometry.LatLng(
+                                vehicle.lat.toDouble(),
+                                vehicle.lon.toDouble()
+                            )
+                        )
+
+                        com.reconmaps.app.runtime.render.VehicleRenderData(
+                            x = point.x.toFloat(),
+                            y = point.y.toFloat(),
+                            color = android.graphics.Color.BLUE
+                        )
+                    }
+                    vehicleOverlayView.setRenderData(renderData)
+                }
+
+
+
                 debugView.update(state)
 
+                val self = state.vehicles.firstOrNull()
+
+                if (self != null && !hasCenteredCamera) {
+
+                    android.util.Log.d("CAMERA", "LOCKING CAMERA ONCE")
+
+                    mapCanvasView.moveCamera(
+                        self.lat.toDouble(),
+                        self.lon.toDouble()
+                    )
+
+                    hasCenteredCamera = true
+                }
                 if (::buttonBar.isInitialized) {
                     root.removeView(buttonBar)
                 }
@@ -67,6 +125,7 @@ class MainActivity : AppCompatActivity() {
                 root.addView(buttonBar)
             }
         }
+
 
         // ✅ Permission check BEFORE starting Runtime
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -100,26 +159,27 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onStart() {
         super.onStart()
-        mapView.getMapView().onStart()
+        mapCanvasView.onStart()
     }
 
     override fun onResume() {
         super.onResume()
-        mapView.onResume()
+        mapCanvasView.onResume()
     }
 
     override fun onPause() {
-        mapView.getMapView().onPause()
+        mapCanvasView.onPause()
         super.onPause()
     }
 
     override fun onStop() {
-        mapView.getMapView().onStop()
+        mapCanvasView.onStop()
         super.onStop()
     }
 
     override fun onDestroy() {
-        mapView.getMapView().onDestroy()
+        mapCanvasView.onDestroy()
         super.onDestroy()
     }
+
 }

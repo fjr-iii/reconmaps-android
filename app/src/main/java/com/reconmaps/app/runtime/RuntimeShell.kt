@@ -1,16 +1,19 @@
 package com.reconmaps.app.runtime
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
+
 import com.reconmaps.app.runtime.engines.PGM1_GPS
 import com.reconmaps.app.runtime.engines.PGM4_DataSync
-import kotlin.math.cos
-import kotlin.math.sin
 import com.reconmaps.app.runtime.engines.PGM5_Transport
-import com.reconmaps.app.runtime.engines.TransportPacket
 
 object RuntimeShell {
 
+    // --------------------------------------------------
+    // STATE
+    // --------------------------------------------------
     private var state = SystemState(
         vehicles = emptyList(),
         gpsEnabled = true,
@@ -19,57 +22,28 @@ object RuntimeShell {
     )
 
     private val data = PGM4_DataSync()
-    private val selfId = java.util.UUID.randomUUID().toString()
-
     private val transport = PGM5_Transport()
 
     private val listeners = mutableListOf<(SystemState) -> Unit>()
+
     private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var gps: PGM1_GPS
+
     private var tick = 0
-    private var lastSendTime: Long = 0
 
-    fun start(context: android.content.Context) {
 
-        android.util.Log.d("TEST", "APP STARTED")
+    // --------------------------------------------------
+    // PUBLIC API
+    // --------------------------------------------------
+    fun start(context: Context) {
+        Log.d("RUNTIME", "APP STARTED")
 
-        gps = PGM1_GPS(context)
+        gps = PGM1_GPS(context.applicationContext)
 
         gps.start()
 
         loop()
-    }
-    private fun loop() {
-        handler.postDelayed({
-
-            tick++
-
-            val lat = gps.lastGoodLat
-            val lon = gps.lastGoodLon
-
-            if (lat != null && lon != null) {
-
-                data.updateVehicle(
-                    "SELF",
-                    lat.toFloat(),
-                    lon.toFloat(),
-                    state.channel,
-                    System.currentTimeMillis()
-                )
-
-                android.util.Log.d("RUNTIME", "[GPS->RUNTIME] lat=$lat lon=$lon")
-            }
-
-            state = state.copy(
-                vehicles = data.getVehicles()
-            )
-
-            notifyListeners()
-
-            loop()
-
-        }, 1000)
     }
 
     fun subscribe(listener: (SystemState) -> Unit) {
@@ -77,9 +51,6 @@ object RuntimeShell {
         listener(state)
     }
 
-    private fun notifyListeners() {
-        listeners.forEach { it(state) }
-    }
     fun toggleGps() {
         state = state.copy(
             gpsEnabled = !state.gpsEnabled
@@ -93,6 +64,7 @@ object RuntimeShell {
         )
         notifyListeners()
     }
+
     fun nextChannel() {
         val next = when (state.channel) {
             Channel.ALPHA -> Channel.BRAVO
@@ -103,17 +75,124 @@ object RuntimeShell {
         }
 
         state = state.copy(channel = next)
-
+        notifyListeners()
     }
-    fun onPacketReceived(packet: TransportPacket) {
-        android.util.Log.d("RUNTIME", "[INBOUND] Packet received from transport: $packet")
 
-        data.updateVehicle(
-            packet.deviceId,
-            packet.lat.toFloat(),
-            packet.lon.toFloat(),
-            state.channel,
-            packet.timestamp
+    // --------------------------------------------------
+    // MAIN LOOP
+    // --------------------------------------------------
+    private fun loop() {
+        handler.postDelayed({
+
+            tick++
+
+            val lat = gps.lastGoodLat
+            val lon = gps.lastGoodLon
+
+            lat?.let { safeLat ->
+                lon?.let { safeLon ->
+
+                    Log.d("RUNTIME", "[GPS->RUNTIME] lat=$safeLat lon=$safeLon")
+
+                    data.updateVehicle(
+                        state.selfId,
+                        safeLat.toFloat(),
+                        safeLon.toFloat(),
+                        state.channel,
+                        System.currentTimeMillis()
+                    )
+                }
+            }
+
+            // --------------------------------------------------
+            // INBOUND TRANSPORT
+            // --------------------------------------------------
+
+            pollInboundTransport()
+
+            // --------------------------------------------------
+            // UPDATE STATE
+            // --------------------------------------------------
+
+            state = state.copy(
+                vehicles = data.getVehicles()
+            )
+
+            // --------------------------------------------------
+            // NOTIFY UI
+            // --------------------------------------------------
+
+            notifyListeners()
+
+            // --------------------------------------------------
+            // LOOP AGAIN
+            // --------------------------------------------------
+
+            loop()
+
+        }, 1000)
+    }
+
+    // --------------------------------------------------
+    // TRANSPORT INBOUND
+    // --------------------------------------------------
+
+    private fun pollInboundTransport() {
+
+        Log.d("RUNTIME", "[INBOUND] pollInboundTransport() running")
+
+        val packets = transport.drainInboundQueue()
+
+        Log.d("RUNTIME", "[INBOUND] queue size: ${packets.size}")
+
+        if (packets.isEmpty()) return
+
+        for (packet in packets) {
+
+            if (packet.deviceId == state.selfId) {
+                Log.d("RUNTIME", "[INBOUND] skipping self packet")
+                continue
+            }
+
+            Log.d("RUNTIME", "[INBOUND] processing packet: $packet")
+
+            data.updateVehicle(
+                packet.deviceId,
+                packet.lat.toFloat(),
+                packet.lon.toFloat(),
+                state.channel,
+                packet.timestamp
+            )
+        }
+
+        // push updates to UI
+        state = state.copy(
+            vehicles = data.getVehicles()
         )
+
+        notifyListeners()
+    }
+
+    // --------------------------------------------------
+    // INTERNAL
+    // --------------------------------------------------
+
+    private fun notifyListeners() {
+        listeners.forEach { it(state) }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

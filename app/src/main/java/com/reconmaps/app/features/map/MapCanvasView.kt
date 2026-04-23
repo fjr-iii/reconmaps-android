@@ -6,19 +6,15 @@ import android.util.AttributeSet
 import android.widget.FrameLayout
 
 import org.maplibre.android.maps.MapView
-import android.view.View
-
 import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.Style
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.geometry.LatLng
 
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import com.reconmaps.app.runtime.Vehicle
-
-class MapCanvasView(context: Context, attrs: AttributeSet?) : FrameLayout(context, attrs) {
+class MapCanvasView(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
 
     private val mapView = MapView(context)
+    // 🔑 This is what we expose for projection
+    private var mapLibreMap: MapLibreMap? = null
 
     init {
         addView(
@@ -34,73 +30,79 @@ class MapCanvasView(context: Context, attrs: AttributeSet?) : FrameLayout(contex
         mapView.onCreate(savedInstanceState)
 
         mapView.getMapAsync { map ->
-            map.setStyle("https://demotiles.maplibre.org/style.json")
+
+            mapLibreMap = map
+
+            map.setStyle(org.maplibre.android.maps.Style.Builder()) { style ->
+
+                val rasterSource = org.maplibre.android.style.sources.RasterSource(
+                    "osm-source",
+                    org.maplibre.android.style.sources.TileSet(
+                        "2.0",
+                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    ),
+                    256
+                )
+
+                style.addSource(rasterSource)
+
+                val rasterLayer = org.maplibre.android.style.layers.RasterLayer(
+                    "osm-layer",
+                    "osm-source"
+                )
+
+                style.addLayer(rasterLayer)
+
+                android.util.Log.d("MAP", "OSM raster tiles loaded")
+            }
         }
     }
 
+    // --------------------------------------------------
+    // ACCESSORS
+    // --------------------------------------------------
     fun getMapView(): MapView {
         return mapView
     }
-
-    private val paint = Paint().apply {
-        color = Color.BLUE
-        isAntiAlias = true
+    fun getMapLibreMap(): MapLibreMap? {
+        return mapLibreMap
     }
-
-    private var vehicles: List<Vehicle> = emptyList()
-
-    fun updateVehicles(vehicles: List<Vehicle>) {
-        this.vehicles = vehicles
-        invalidate()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        android.util.Log.d("MAP", "Drawing vehicles: ${vehicles.size}")
-        super.onDraw(canvas)
-
-        // Background
-        canvas.drawColor(Color.BLACK)
-
-        val self = vehicles.find { it.id == "SELF" }
-
-        if (self == null) return
-
-        val now = System.currentTimeMillis()
-
-        vehicles.forEach { vehicle ->
-
-            if (now - vehicle.lastUpdate > 5000) return@forEach
-
-            when {
-                vehicle.id == "SELF" -> paint.color = Color.RED
-                vehicle.isStale -> paint.color = Color.GRAY
-                else -> paint.color = Color.BLUE
-            }
-
-            val centerX = width / 2f
-            val centerY = height / 2f
-            val scale = 1000000f
-
-            val dx = vehicle.y - self.y
-            val dy = vehicle.x - self.x
-
-            val screenX = centerX + (dx * scale)
-            val screenY = centerY - (dy * scale)
-
-            canvas.drawCircle(screenX, screenY, 20f, paint)
-        }
-    }
+    // --------------------------------------------------
+    // CAMERA CONTROL
+    // --------------------------------------------------
     fun moveCamera(lat: Double, lon: Double) {
-        mapView.getMapAsync { map ->
-            val position = org.maplibre.android.camera.CameraPosition.Builder()
-                .target(org.maplibre.android.geometry.LatLng(lat, lon))
-                .zoom(15.0)
+        mapLibreMap?.let { map ->
+
+            val position = CameraPosition.Builder()
+                .target(LatLng(lat, lon))
+                .zoom(18.0)
                 .build()
 
             map.cameraPosition = position
         }
     }
+
+    // --------------------------------------------------
+    // LIFECYCLE
+    // --------------------------------------------------
+
+    fun onStart() {
+        mapView.onStart()
+    }
+
     fun onResume() {
         mapView.onResume()
+    }
+
+    fun onPause() {
+        mapView.onPause()
+    }
+
+    fun onStop() {
+        mapView.onStop()
+    }
+
+    fun onDestroy() {
+        mapView.onDestroy()
     }
 }

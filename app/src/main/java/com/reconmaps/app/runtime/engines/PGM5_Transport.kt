@@ -5,6 +5,18 @@ import com.reconmaps.app.runtime.RuntimeShell
 import android.util.Log
 
 class PGM5_Transport {
+    private val inboundQueue = mutableListOf<TransportPacket>()
+
+    fun drainInboundQueue(): List<TransportPacket> {
+
+        if (inboundQueue.isEmpty()) return emptyList()
+
+        val packets = inboundQueue.toList()
+        inboundQueue.clear()
+
+        return packets
+    }
+
     companion object {
         private const val TAG = "PGM5_TRANSPORT"
     }
@@ -88,7 +100,10 @@ class PGM5_Transport {
         }.start()
     }
     fun receivePacket(packet: TransportPacket) {
-        Log.d(TAG, "[RECEIVE] Packet received: $packet")
-        com.reconmaps.app.runtime.RuntimeShell.onPacketReceived(packet)
+        android.util.Log.d("PGM5", "[RECEIVE] Packet received: $packet")
+
+        inboundQueue.add(packet)
+
+        // Phase 09.3 — runtime pull model (no direct call)
     }
 }

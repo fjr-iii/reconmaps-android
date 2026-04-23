@@ -23,8 +23,8 @@ class PGM4_DataSync {
 
         vehicles[id] = Vehicle(
             id = id,
-            x = x,
-            y = y,
+            lat = x,
+            lon = y,
             channel = channel,
             lastUpdate = timestamp,
             isStale = false
