@@ -3,17 +3,18 @@ package com.reconmaps.app.runtime.engines
 import com.reconmaps.app.runtime.Channel
 import com.reconmaps.app.runtime.Vehicle
 
-class PGM4_DataSync {
+class PGM4_DataSync(private val selfId: String) {
 
     private val vehicles = mutableMapOf<String, Vehicle>()
 
     fun updateVehicle(
         id: String,
-        x: Float,
-        y: Float,
-        channel: Channel,
-        timestamp: Long
-    ) {
+        lat: Double,
+        lon: Double,
+        timestamp: Long,
+        isSelf: Boolean
+    )
+    {
         val existing = vehicles[id]
 
         // 🔒 Ignore stale packets
@@ -23,12 +24,13 @@ class PGM4_DataSync {
 
         vehicles[id] = Vehicle(
             id = id,
-            lat = x,
-            lon = y,
-            channel = channel,
+            lat = lat,
+            lon = lon,
             lastUpdate = timestamp,
-            isStale = false
+            isStale = false,
+            isSelf = (id == selfId)
         )
+        android.util.Log.d("RUNTIME", "SELF FLAG = ${vehicles[id]?.isSelf}")
     }
 
     fun getVehicles(): List<Vehicle> {

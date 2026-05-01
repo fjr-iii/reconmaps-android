@@ -11,6 +11,8 @@ import com.reconmaps.app.runtime.engines.PGM5_Transport
 
 object RuntimeShell {
 
+    val selfId: String = java.util.UUID.randomUUID().toString()
+
     // --------------------------------------------------
     // STATE
     // --------------------------------------------------
@@ -21,7 +23,7 @@ object RuntimeShell {
         channel = Channel.ALPHA
     )
 
-    private val data = PGM4_DataSync()
+    private val data = PGM4_DataSync(selfId)
     private val transport = PGM5_Transport()
 
     private val listeners = mutableListOf<(SystemState) -> Unit>()
@@ -82,6 +84,7 @@ object RuntimeShell {
     // MAIN LOOP
     // --------------------------------------------------
     private fun loop() {
+
         handler.postDelayed({
 
             tick++
@@ -94,13 +97,32 @@ object RuntimeShell {
 
                     Log.d("RUNTIME", "[GPS->RUNTIME] lat=$safeLat lon=$safeLon")
 
+                    state.latitude = safeLat
+                    state.longitude = safeLon
+
+                    Log.d("RUNTIME", "[OUTBOUND] Updating self vehicle")
+
                     data.updateVehicle(
-                        state.selfId,
-                        safeLat.toFloat(),
-                        safeLon.toFloat(),
-                        state.channel,
-                        System.currentTimeMillis()
+                        selfId,
+                        safeLat,
+                        safeLon,
+                        System.currentTimeMillis(),
+                        false
                     )
+
+                    transport.sendPacket(
+                        com.reconmaps.app.runtime.engines.TransportPacket(
+                            deviceId = selfId,
+                            timestamp = System.currentTimeMillis(),
+                            lat = safeLat,
+                            lon = safeLon
+                        )
+                    )
+                    val vehicles = data.getVehicles()
+
+                    Log.d("RUNTIME", "VEHICLES SIZE = ${vehicles.size}")
+
+                    state = state.copy(vehicles = vehicles)
                 }
             }
 
@@ -158,10 +180,10 @@ object RuntimeShell {
 
             data.updateVehicle(
                 packet.deviceId,
-                packet.lat.toFloat(),
-                packet.lon.toFloat(),
-                state.channel,
-                packet.timestamp
+                packet.lat,
+                packet.lon,
+                packet.timestamp,
+                packet.deviceId == state.selfId
             )
         }
 

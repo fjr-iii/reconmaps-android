@@ -3,6 +3,7 @@ package com.reconmaps.app.screens
 import android.os.Bundle
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import com.reconmaps.app.runtime.SystemState
 import com.reconmaps.app.features.map.MapCanvasView
 import com.reconmaps.app.runtime.RuntimeShell
 import com.reconmaps.app.devtools.DebugOverlayView
@@ -12,9 +13,7 @@ import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.reconmaps.app.features.map.VehicleOverlayView
-
-
-
+import android.widget.Button
 
 class MainActivity : AppCompatActivity() {
     lateinit var mapCanvasView: MapCanvasView
@@ -24,6 +23,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var debugView: DebugOverlayView
     private lateinit var buttonBar: ButtonBar
     private lateinit var root: FrameLayout
+    private val renderTransformer = com.reconmaps.app.runtime.render.RenderTransformer()
+
+    private var lastCameraLat: Double? = null
+    private var lastCameraLon: Double? = null
+    private var followMode: Boolean = true
+    private var currentState: SystemState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +37,10 @@ class MainActivity : AppCompatActivity() {
 
         // Create map view
         mapCanvasView = MapCanvasView(this, null)
+
+        mapCanvasView.onUserInteraction = {
+            followMode = false
+        }
         mapCanvasView.onCreate(savedInstanceState)
 
         // Debug overlay
@@ -56,36 +65,62 @@ class MainActivity : AppCompatActivity() {
 
         root.addView(debugView)
 
-
         setContentView(root)
 
         // 🔗 Bind Runtime → UI (THIS is the correct connection)
         RuntimeShell.subscribe { state ->
             runOnUiThread {
 
+                currentState = state
+
                 val map = mapCanvasView.getMapLibreMap()
 
                 if (map != null) {
 
-                    val renderData = state.vehicles.map { vehicle ->
+                    val renderData = renderTransformer.transform(state.vehicles, map)
+                    val selfVehicle = state.vehicles.find { it.isSelf }
 
-                        val point = map.projection.toScreenLocation(
-                            org.maplibre.android.geometry.LatLng(
-                                vehicle.lat.toDouble(),
-                                vehicle.lon.toDouble()
+                    if (selfVehicle != null && followMode) {
+
+                        val newLat = selfVehicle.lat
+                        val newLon = selfVehicle.lon
+
+                        if (lastCameraLat == null || lastCameraLon == null) {
+
+                            // First time — always move camera
+                            map.moveCamera(
+                                org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                                    org.maplibre.android.geometry.LatLng(newLat, newLon)
+                                )
                             )
-                        )
 
-                        com.reconmaps.app.runtime.render.VehicleRenderData(
-                            x = point.x.toFloat(),
-                            y = point.y.toFloat(),
-                            color = android.graphics.Color.BLUE
-                        )
+                            lastCameraLat = newLat
+                            lastCameraLon = newLon
+
+                        } else {
+
+                            val latDiff = Math.abs(newLat - lastCameraLat!!)
+                            val lonDiff = Math.abs(newLon - lastCameraLon!!)
+
+                            val threshold = 0.00001  // ~5–6 meters (1m for testing)
+
+                            if (latDiff > threshold || lonDiff > threshold) {
+
+                                map.moveCamera(
+                                    org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                                        org.maplibre.android.geometry.LatLng(newLat, newLon)
+                                    )
+                                )
+
+                                lastCameraLat = newLat
+                                lastCameraLon = newLon
+                            }
+                        }
                     }
+
+                    android.util.Log.d("UI", "RENDER DATA SIZE = ${renderData.size}")
                     vehicleOverlayView.setRenderData(renderData)
                 }
-
-
 
                 debugView.update(state)
 
@@ -123,6 +158,46 @@ class MainActivity : AppCompatActivity() {
                 buttonBar.layoutParams = params
 
                 root.addView(buttonBar)
+
+                val recenterBtn = Button(this).apply {
+                    text = "CENTER"
+                }
+
+                val recenterParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    gravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
+                    bottomMargin = 350   // ← THIS now works correctly
+                    marginEnd = 40
+                }
+
+                root.addView(recenterBtn, recenterParams)
+
+                recenterBtn.setOnClickListener {
+                    buttonBar.onRecenterClicked?.invoke()
+                }
+
+                buttonBar.onRecenterClicked = {
+                    followMode = true
+
+                    val map = mapCanvasView.getMapLibreMap()
+                    val selfVehicle = currentState?.vehicles?.find { it.isSelf }
+
+                    if (map != null && selfVehicle != null) {
+                        map.moveCamera(
+                            org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                                org.maplibre.android.geometry.LatLng(
+                                    selfVehicle.lat,
+                                    selfVehicle.lon
+                                )
+                            )
+                        )
+
+                        lastCameraLat = selfVehicle.lat
+                        lastCameraLon = selfVehicle.lon
+                    }
+                }
             }
         }
 

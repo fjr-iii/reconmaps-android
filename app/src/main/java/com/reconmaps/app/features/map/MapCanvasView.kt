@@ -11,6 +11,7 @@ import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 
 class MapCanvasView(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
+    var onUserInteraction: (() -> Unit)? = null
 
     private val mapView = MapView(context)
     // 🔑 This is what we expose for projection
@@ -30,6 +31,17 @@ class MapCanvasView(context: Context, attrs: AttributeSet? = null) : FrameLayout
         mapView.onCreate(savedInstanceState)
 
         mapView.getMapAsync { map ->
+
+            map.addOnMoveListener(object : org.maplibre.android.maps.MapLibreMap.OnMoveListener {
+
+                override fun onMoveBegin(detector: org.maplibre.android.gestures.MoveGestureDetector) {
+                    onUserInteraction?.invoke()
+                }
+
+                override fun onMove(detector: org.maplibre.android.gestures.MoveGestureDetector) {}
+
+                override fun onMoveEnd(detector: org.maplibre.android.gestures.MoveGestureDetector) {}
+            })
 
             mapLibreMap = map
 

@@ -18,8 +18,8 @@ class VehicleOverlayView(
 
     private var renderData: List<VehicleRenderData> = emptyList()
 
-    fun setRenderData(data: List<VehicleRenderData>) {
-        renderData = data
+    fun setRenderData(renderData: List<VehicleRenderData>) {
+        this.renderData = renderData
         invalidate()
     }
 

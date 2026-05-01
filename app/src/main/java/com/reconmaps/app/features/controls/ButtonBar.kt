@@ -2,26 +2,47 @@ package com.reconmaps.app.features.controls
 
 import android.content.Context
 import android.widget.Button
+import android.view.Gravity
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import com.reconmaps.app.runtime.SystemState
 import com.reconmaps.app.runtime.Channel
 
-class ButtonBar(
+class ButtonBar @JvmOverloads constructor(
     context: Context,
+    attrs: android.util.AttributeSet? = null,
+    defStyleAttr: Int = 0,
     val systemState: SystemState,
     val onGpsToggle: () -> Unit,
     val onTrackingToggle: () -> Unit,
     val onChannelNext: () -> Unit
-) : LinearLayout(context) {
+) : LinearLayout(context, attrs, defStyleAttr) {
+
+    // 🔁 New callback
+    var onRecenterClicked: (() -> Unit)? = null
 
     init {
         // 🔴 DEBUG: make container visible
         setBackgroundColor(0xFFFF0000.toInt()) // keep for now (debug)
-
         setPadding(8, 8, 8, 8)
-
         orientation = VERTICAL
 
+        // OVERLAY ROOT CONTAINER
+        val overlayRoot = FrameLayout(context)
+        addView(
+            overlayRoot,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT
+            )
+        )
+
+        // CONTENT CONTAINER
+        val contentLayout = LinearLayout(context).apply {
+            orientation = VERTICAL
+        }
+
+        // Buttons
         val gpsBtn = Button(context).apply {
             text = "GPS"
 
@@ -110,6 +131,7 @@ class ButtonBar(
             )
         }
 
+        //ROWS
         val row1 = LinearLayout(context).apply {
             orientation = HORIZONTAL
             layoutParams = LayoutParams(
@@ -137,7 +159,10 @@ class ButtonBar(
         row2.addView(settingsBtn)
 
 // Add rows to container
-        addView(row1)
-        addView(row2)
+        contentLayout.addView(row1)
+        contentLayout.addView(row2)
+
+        overlayRoot.addView(contentLayout)
     }
-}
+  }
+

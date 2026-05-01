@@ -38,9 +38,10 @@ class PGM5_Transport {
                     "deviceId": "${packet.deviceId}",
                     "timestamp": ${packet.timestamp},
                     "lat": ${packet.lat},
-                    "lon": ${packet.lon}
+                    "lon": ${packet.lon},
+                    "channel": "ALPHA"
                 }
-            """.trimIndent()
+                """.trimIndent()
 
                 Log.d(TAG, "[TRANSPORT] Payload: $json")
 
