@@ -77,6 +77,8 @@ class MainActivity : AppCompatActivity() {
 
                 if (map != null) {
 
+                    android.util.Log.d("DEBUG", "VEHICLE COUNT = ${state.vehicles.size}")
+
                     val renderData = renderTransformer.transform(state.vehicles, map)
                     val selfVehicle = state.vehicles.find { it.isSelf }
 

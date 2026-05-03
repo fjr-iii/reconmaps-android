@@ -107,7 +107,7 @@ object RuntimeShell {
                         safeLat,
                         safeLon,
                         System.currentTimeMillis(),
-                        false
+                        true
                     )
 
                     transport.sendPacket(

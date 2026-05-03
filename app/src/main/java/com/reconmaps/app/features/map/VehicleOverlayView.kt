@@ -6,6 +6,8 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
 import com.reconmaps.app.runtime.render.VehicleRenderData
+import com.reconmaps.app.runtime.render.MarkerConfig
+
 
 class VehicleOverlayView(
     context: Context,
@@ -27,8 +29,29 @@ class VehicleOverlayView(
         super.onDraw(canvas)
 
         for (item in renderData) {
-            paint.color = item.color
-            canvas.drawCircle(item.x, item.y, 12f, paint)
+
+            val style = MarkerConfig.styles[item.role]
+            val color = style?.color ?: android.graphics.Color.WHITE
+
+            if (style?.hasHalo == true) {
+
+                // Outer ring
+                paint.color = color
+                canvas.drawCircle(item.x, item.y, 20f, paint)
+
+                // White halo
+                paint.color = android.graphics.Color.WHITE
+                canvas.drawCircle(item.x, item.y, 14f, paint)
+
+                // Core
+                paint.color = color
+                canvas.drawCircle(item.x, item.y, 8f, paint)
+
+            } else {
+
+                paint.color = color
+                canvas.drawCircle(item.x, item.y, 12f, paint)
+            }
         }
     }
 }

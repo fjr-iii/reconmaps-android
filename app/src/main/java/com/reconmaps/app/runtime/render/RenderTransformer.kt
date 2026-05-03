@@ -1,5 +1,6 @@
 package com.reconmaps.app.runtime.render
 
+import com.reconmaps.app.runtime.render.MarkerRole
 import com.reconmaps.app.runtime.Vehicle
 
 class RenderTransformer {
@@ -21,11 +22,12 @@ class RenderTransformer {
             VehicleRenderData(
                 x = point.x.toFloat(),
                 y = point.y.toFloat(),
-                color = if (vehicle.isSelf) {
-                    android.graphics.Color.BLUE
+                role = if (vehicle.isSelf) {
+                    MarkerRole.SELF
                 } else {
-                    android.graphics.Color.RED
-                }
+                    MarkerRole.VEHICLE
+                },
+                isStale = vehicle.isStale
             )
         }
     }

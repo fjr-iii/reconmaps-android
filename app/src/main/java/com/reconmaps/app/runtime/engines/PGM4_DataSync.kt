@@ -39,30 +39,32 @@ class PGM4_DataSync(private val selfId: String) {
         val result = mutableListOf<Vehicle>()
         val toRemove = mutableListOf<String>()
 
+        // 🔹 First pass: identify removals
         vehicles.forEach { (id, vehicle) ->
+            val age = now - vehicle.lastUpdate
+
+            if (age > 30_000) {
+                toRemove.add(id)
+            }
+        }
+
+        // 🔹 Cleanup BEFORE rendering
+        toRemove.forEach { vehicles.remove(it) }
+
+        // 🔹 Second pass: build clean result
+        vehicles.forEach { (_, vehicle) ->
 
             val age = now - vehicle.lastUpdate
 
             when {
-                age > 30_000 -> {
-                    // ❌ remove
-                    toRemove.add(id)
-                }
-
                 age > 10_000 -> {
-                    // ⚠ stale
                     result.add(vehicle.copy(isStale = true))
                 }
-
                 else -> {
-                    // ✅ fresh
                     result.add(vehicle.copy(isStale = false))
                 }
             }
         }
-
-        // cleanup
-        toRemove.forEach { vehicles.remove(it) }
 
         return result
     }

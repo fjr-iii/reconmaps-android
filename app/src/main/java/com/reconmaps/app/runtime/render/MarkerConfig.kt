@@ -2,20 +2,20 @@ package com.reconmaps.app.runtime.render
 
 import android.graphics.Color
 
-object MarkerConfig {
+// 🔹 Marker Roles (Authoritative List)
+enum class MarkerRole {
+    LEADER,
+    SWEEP,
+    VEHICLE,
+    SELF,
+    PHOTO_WAYPOINT,
+    MANUAL_WAYPOINT,
+    BREADCRUMB,
+    ECHO_11,
+    UNKNOWN
+}
 
-    // 🔹 Marker Roles (Authoritative List)
-    enum class MarkerRole {
-        LEADER,
-        SWEEP,
-        VEHICLE,
-        SELF,
-        PHOTO_WAYPOINT,
-        MANUAL_WAYPOINT,
-        BREADCRUMB,
-        ECHO_11,          // Placeholder for future feature
-        UNKNOWN           // Safety fallback
-    }
+object MarkerConfig {
 
     // 🔹 Shape Definitions
     enum class Shape {
@@ -55,7 +55,7 @@ object MarkerConfig {
         // 🔵 Priority 3 — Convoy Vehicle
         MarkerRole.VEHICLE to MarkerStyle(
             priority = 3,
-            color = Color.BLUE,
+            color = Color.RED,
             shape = Shape.CIRCLE
         ),
 

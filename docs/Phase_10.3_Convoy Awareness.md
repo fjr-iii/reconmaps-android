@@ -80,6 +80,8 @@ Device identity is centralized and enforced through consistent selfId usage.
 
 Implement marker system based on defined marker hierarchy, including shape differentiation, self-vehicle halo, and visual prioritization.
 
+Phase 10.4 introduces a centralized marker configuration system via MarkerConfig.kt, located in the runtime/render layer. This file defines all marker roles, shapes, colors, and rendering priorities in a single authoritative source, eliminating hardcoded visuals from the rendering pipeline. The RenderTransformer will reference this config to assign a MarkerRole to each vehicle or map element, and the VehicleOverlayView will use the resolved style to draw the correct marker. This ensures that any future changes to marker appearance or hierarchy can be made in one place without modifying transformation or rendering logic.
+
 ---
 
 ## 7. One-Line Phase Summary
