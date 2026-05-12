@@ -79,6 +79,22 @@ class MapCanvasView(context: Context, attrs: AttributeSet? = null) : FrameLayout
     fun getMapLibreMap(): MapLibreMap? {
         return mapLibreMap
     }
+    fun project(
+        lat: Double,
+        lon: Double
+    ): Pair<Float, Float>? {
+
+        val map = mapLibreMap ?: return null
+
+        val point = map.projection.toScreenLocation(
+            LatLng(lat, lon)
+        )
+
+        return Pair(
+            point.x.toFloat(),
+            point.y.toFloat()
+        )
+    }
     // --------------------------------------------------
     // CAMERA CONTROL
     // --------------------------------------------------

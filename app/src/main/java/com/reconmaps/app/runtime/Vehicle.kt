@@ -6,5 +6,6 @@ data class Vehicle(
     val lon: Double,
     val lastUpdate: Long,
     val isStale: Boolean,
-    val isSelf: Boolean
+    val isSelf: Boolean,
+    val convoyRole: ConvoyRole = ConvoyRole.MEMBER
 )

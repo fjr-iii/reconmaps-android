@@ -9,6 +9,8 @@ import com.reconmaps.app.runtime.engines.PGM1_GPS
 import com.reconmaps.app.runtime.engines.PGM4_DataSync
 import com.reconmaps.app.runtime.engines.PGM5_Transport
 
+import com.reconmaps.app.runtime.trail.TrailManager
+
 object RuntimeShell {
 
     val selfId: String = java.util.UUID.randomUUID().toString()
@@ -30,7 +32,10 @@ object RuntimeShell {
 
     private val handler = Handler(Looper.getMainLooper())
 
+    private val trailManager = TrailManager()
+
     private lateinit var gps: PGM1_GPS
+
 
     private var tick = 0
 
@@ -52,6 +57,7 @@ object RuntimeShell {
         listeners.add(listener)
         listener(state)
     }
+    fun getTrailPoints() = trailManager.getTrailPoints()
 
     fun toggleGps() {
         state = state.copy(
@@ -110,6 +116,12 @@ object RuntimeShell {
                         true
                     )
 
+                    trailManager.addTrailPoint(
+                        lat = safeLat,
+                        lon = safeLon,
+                        timestamp = System.currentTimeMillis()
+                    )
+
                     transport.sendPacket(
                         com.reconmaps.app.runtime.engines.TransportPacket(
                             deviceId = selfId,
@@ -118,7 +130,29 @@ object RuntimeShell {
                             lon = safeLon
                         )
                     )
-                    val vehicles = data.getVehicles()
+                    val rawVehicles = data.getVehicles()
+
+                    val sorted = rawVehicles.sortedBy { it.id }
+
+                    // ❗ Exclude self BEFORE picking roles
+                    val nonSelf = sorted.filter { !it.isSelf }
+
+                    val leaderId = nonSelf.getOrNull(0)?.id
+                    val sweepId = if (nonSelf.size > 1) nonSelf.last().id else null
+
+                    val vehicles = sorted.map { vehicle ->
+
+                        val role = when {
+
+                            vehicle.isSelf -> ConvoyRole.SELF
+                            vehicle.id == leaderId && vehicle.id != selfId -> ConvoyRole.LEADER
+                            vehicle.id == sweepId  && vehicle.id != selfId -> ConvoyRole.SWEEP
+                            else -> ConvoyRole.MEMBER
+                        }
+                        Log.d("ROLE_ASSIGN", "ID=${vehicle.id} ROLE=$role SELF=${vehicle.isSelf}")
+
+                        vehicle.copy(convoyRole = role)
+                    }
 
                     Log.d("RUNTIME", "VEHICLES SIZE = ${vehicles.size}")
 
@@ -136,9 +170,7 @@ object RuntimeShell {
             // UPDATE STATE
             // --------------------------------------------------
 
-            state = state.copy(
-                vehicles = data.getVehicles()
-            )
+
 
             // --------------------------------------------------
             // NOTIFY UI
@@ -188,10 +220,7 @@ object RuntimeShell {
         }
 
         // push updates to UI
-        state = state.copy(
-            vehicles = data.getVehicles()
-        )
-
+// push updates to UI
         notifyListeners()
     }
 

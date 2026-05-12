@@ -2,6 +2,7 @@ package com.reconmaps.app.runtime.engines
 
 import com.reconmaps.app.runtime.Channel
 import com.reconmaps.app.runtime.Vehicle
+import com.reconmaps.app.runtime.ConvoyRole
 
 class PGM4_DataSync(private val selfId: String) {
 
@@ -42,28 +43,33 @@ class PGM4_DataSync(private val selfId: String) {
         // 🔹 First pass: identify removals
         vehicles.forEach { (id, vehicle) ->
             val age = now - vehicle.lastUpdate
-
             if (age > 30_000) {
                 toRemove.add(id)
             }
         }
 
-        // 🔹 Cleanup BEFORE rendering
+// 🔹 Cleanup BEFORE rendering
         toRemove.forEach { vehicles.remove(it) }
 
-        // 🔹 Second pass: build clean result
-        vehicles.forEach { (_, vehicle) ->
+// 🔹 Second pass: build clean result
+        val sortedVehicles = vehicles.values.sortedBy { it.id }
+
+        val firstId = sortedVehicles.firstOrNull()?.id
+        val lastId = sortedVehicles.lastOrNull()?.id
+
+        sortedVehicles.forEach { vehicle ->
 
             val age = now - vehicle.lastUpdate
 
-            when {
-                age > 10_000 -> {
-                    result.add(vehicle.copy(isStale = true))
-                }
-                else -> {
-                    result.add(vehicle.copy(isStale = false))
-                }
+            val role = vehicle.convoyRole
+
+            val updatedVehicle = if (age > 10_000) {
+                vehicle.copy(isStale = true)
+            } else {
+                vehicle.copy(isStale = false)
             }
+
+            result.add(updatedVehicle)
         }
 
         return result

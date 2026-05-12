@@ -26,7 +26,7 @@ class PGM5_Transport {
 
         Thread {
             try {
-                val url = java.net.URL("http://192.168.1.194:3000/packet")
+                val url = java.net.URL("http://157.245.250.214:3000/packet")
                 val connection = url.openConnection() as java.net.HttpURLConnection
 
                 connection.requestMethod = "POST"

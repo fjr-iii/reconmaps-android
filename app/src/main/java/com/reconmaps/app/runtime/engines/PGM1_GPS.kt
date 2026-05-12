@@ -49,7 +49,7 @@ class PGM1_GPS(
             if (!location.hasAccuracy()) return
 
 // Allow network initially, filter only very bad data
-            if (location.accuracy > 1000f) return
+            if (location.accuracy > 35f) return
 
 // ✅ Accept as GOOD location
             lastGoodLat = lat

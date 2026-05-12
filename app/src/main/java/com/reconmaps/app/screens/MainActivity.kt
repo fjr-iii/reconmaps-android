@@ -79,7 +79,11 @@ class MainActivity : AppCompatActivity() {
 
                     android.util.Log.d("DEBUG", "VEHICLE COUNT = ${state.vehicles.size}")
 
-                    val renderData = renderTransformer.transform(state.vehicles, map)
+                    val renderData = renderTransformer.transform(
+                        state.vehicles,
+                        map,
+                        map.cameraPosition.zoom.toDouble()
+                    )
                     val selfVehicle = state.vehicles.find { it.isSelf }
 
                     if (selfVehicle != null && followMode) {
@@ -120,6 +124,11 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
+                    vehicleOverlayView.setProjection { lat, lon ->
+
+                        mapCanvasView.project(lat, lon)
+                            ?: Pair(0f, 0f)
+                    }
                     android.util.Log.d("UI", "RENDER DATA SIZE = ${renderData.size}")
                     vehicleOverlayView.setRenderData(renderData)
                 }
@@ -133,6 +142,7 @@ class MainActivity : AppCompatActivity() {
                     android.util.Log.d("CAMERA", "LOCKING CAMERA ONCE")
 
                     mapCanvasView.moveCamera(
+
                         self.lat.toDouble(),
                         self.lon.toDouble()
                     )

@@ -4,14 +4,23 @@ import android.graphics.Color
 
 // 🔹 Marker Roles (Authoritative List)
 enum class MarkerRole {
+    // Core vehicle roles
+    SELF,
     LEADER,
     SWEEP,
     VEHICLE,
-    SELF,
+
+    // Waypoints
     PHOTO_WAYPOINT,
     MANUAL_WAYPOINT,
+
+    // Trail
     BREADCRUMB,
+
+    // Special
     ECHO_11,
+
+    // Fallback
     UNKNOWN
 }
 
@@ -41,14 +50,14 @@ object MarkerConfig {
         // 🟢 Priority 1 — Leader
         MarkerRole.LEADER to MarkerStyle(
             priority = 1,
-            color = Color.GREEN,
+            color = Color.YELLOW,
             shape = Shape.TRIANGLE
         ),
 
         // 🟠 Priority 2 — Sweep
         MarkerRole.SWEEP to MarkerStyle(
             priority = 2,
-            color = Color.rgb(255, 165, 0), // Orange
+            color = Color.MAGENTA,
             shape = Shape.SQUARE
         ),
 
